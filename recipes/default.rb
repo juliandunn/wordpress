@@ -45,7 +45,7 @@ execute "Download WordPress" do
   only_if { Dir["#{dir}/*"].empty? }
 end
 
-db_config = node['wordpress']['db'].map { |k,v| "--db#{k}=#{v}" }.join(" ")
+db_config = node['wordpress']['db'].map { |k,v| %<--db#{k}="#{v}"> }.join(" ")
 execute "Configure WordPress" do
   action :run
   cwd dir
@@ -71,7 +71,7 @@ template "#{node['wordpress']['dir']}/wp-config.php" do
   notifies :write, "log[wordpress_install_message]"
 end
 
-blog_config = node['wordpress']['blog'].map { |k, v| "--#{k}=#{v}" }.join(" ")
+blog_config = node['wordpress']['blog'].map { |k, v| %<--#{k}="#{v}"> }.join(" ")
 execute "Install WordPress" do
   action :run
   cwd dir
