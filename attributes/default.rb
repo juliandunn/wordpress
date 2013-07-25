@@ -21,11 +21,12 @@
 
 # General settings
 default['wordpress']['version'] = "latest"
-default['wordpress']['checksum'] = ""
-default['wordpress']['repourl'] = "http://wordpress.org/"
-default['wordpress']['dir'] = "/var/www/wordpress"
-default['wordpress']['db']['database'] = "wordpressdb"
+default['wordpress']['host'] = "localhost"
+
+default['wordpress']['db']['name'] = "wordpressdb"
 default['wordpress']['db']['user'] = "wordpressuser"
+default['wordpress']['db']['host'] = "localhost"
+
 default['wordpress']['server_aliases'] = [node['fqdn']]
 
 # Languages
@@ -49,4 +50,20 @@ node['wordpress']['languages']['project_pathes'].each do |project,project_path|
     node['wordpress']['languages']['repourl'] + '/' +
     node['wordpress']['languages']['version'] + project_path +
     node['wordpress']['languages']['lang'] + '/default/export-translations?format=mo'
+end
+
+default['wordpress']['blog']['title'] = "My Blog"
+default['wordpress']['blog']['admin_name'] = "admin"
+default['wordpress']['blog']['admin_password'] = "pass"
+default['wordpress']['blog']['admin_email'] = "admin@localhost"
+default['wordpress']['blog']['url'] = "localhost"
+
+if platform? 'windows'
+  default['wordpress']['bin'] = 'wp.bat'
+  default['wordpress']['dir'] = 'C:/wordpress'
+  default['mysql']['pid_file'] = 'C:/Program Files' # Hack around a bug in the mysql cookbook
+  default['mysql']['confd_dir'] = 'C:/' # Hack around a bug in the mysql cookbook
+else
+  default['wordpress']['bin'] = 'wp'
+  default['wordpress']['dir'] = '/var/www/wordpress'
 end
