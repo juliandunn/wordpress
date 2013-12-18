@@ -38,7 +38,7 @@ node.set_unless['wordpress']['salt']['auth'] = secure_password
 node.set_unless['wordpress']['salt']['secure_auth'] = secure_password
 node.set_unless['wordpress']['salt']['logged_in'] = secure_password
 node.set_unless['wordpress']['salt']['nonce'] = secure_password
-node.save
+node.save unless Chef::Config[:solo]
 
 directory node['wordpress']['dir'] do
   action :create
@@ -111,7 +111,7 @@ else
   web_app "wordpress" do
     template "wordpress.conf.erb"
     docroot node['wordpress']['dir']
-    server_name server_fqdn
+    server_name node['fqdn']
     server_aliases node['wordpress']['server_aliases']
     enable true
   end

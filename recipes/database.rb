@@ -25,7 +25,7 @@ include_recipe "mysql::client" unless platform_family?('windows') # No MySQL cli
 ::Chef::Recipe.send(:include, Wordpress::Helpers)
 
 node.set_unless['wordpress']['db']['pass'] = secure_password
-node.save
+node.save unless Chef::Config[:solo]
 
 db = node['wordpress']['db']
 
