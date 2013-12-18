@@ -18,7 +18,6 @@
 #
 
 include_recipe "php"
-# include_recipe "php::composer" -- maybe put this back?
 
 # On Windows PHP comes with the MySQL Module and we use IIS on Windows
 unless platform? "windows"
@@ -27,7 +26,6 @@ unless platform? "windows"
   include_recipe "apache2::mod_php5"
 end
 
-# include_recipe "wordpress::wp_cli" -- maybe put this back?
 include_recipe "wordpress::database"
 
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
@@ -40,26 +38,26 @@ node.set_unless['wordpress']['salt']['auth'] = secure_password
 node.set_unless['wordpress']['salt']['secure_auth'] = secure_password
 node.set_unless['wordpress']['salt']['logged_in'] = secure_password
 node.set_unless['wordpress']['salt']['nonce'] = secure_password
-
 node.save
 
-bin = node['wordpress']['bin']
-dir = node['wordpress']['dir']
-
-directory dir do
+directory node['wordpress']['dir'] do
   action :create
   if platform_family?('windows')
     rights :read, 'Everyone'
+  else
+    owner 'root'
+    group 'root'
+    mode  '00755'
   end
 end
 
 archive = platform_family?('windows') ? 'wordpress.zip' : 'wordpress.tar.gz'
 
 if platform_family?('windows')
-  windows_zipfile 'c:\inetpub' do # XXX do not hardcode
+  windows_zipfile node['wordpress']['parent_dir'] do
     source node['wordpress']['url']
     action :unzip
-    not_if {::File.exists?('c:\inetpub\wordpress\index.php')}
+    not_if {::File.exists?("#{node['wordpress']['dir']}\\index.php")}
   end
 else
   remote_file "#{Chef::Config[:file_cache_path]}/#{archive}" do
@@ -73,22 +71,22 @@ else
   end
 end
 
-template "#{dir}/wp-config.php" do
+template "#{node['wordpress']['dir']}/wp-config.php" do
   source 'wp-config.php.erb'
   variables(
-    :db_name => node['wordpress']['db']['name'],
-    :db_user => node['wordpress']['db']['user'],
-    :db_password => node['wordpress']['db']['pass'],
-    :db_host => node['wordpress']['db']['host'],
-    :auth_key => node['wordpress']['keys']['auth'],
-    :secure_auth_key => node['wordpress']['keys']['secure_auth'],
-    :logged_in_key => node['wordpress']['keys']['logged_in'],
-    :nonce_key => node['wordpress']['keys']['nonce'],
-    :auth_salt => node['wordpress']['salt']['auth'],
+    :db_name          => node['wordpress']['db']['name'],
+    :db_user          => node['wordpress']['db']['user'],
+    :db_password      => node['wordpress']['db']['pass'],
+    :db_host          => node['wordpress']['db']['host'],
+    :auth_key         => node['wordpress']['keys']['auth'],
+    :secure_auth_key  => node['wordpress']['keys']['secure_auth'],
+    :logged_in_key    => node['wordpress']['keys']['logged_in'],
+    :nonce_key        => node['wordpress']['keys']['nonce'],
+    :auth_salt        => node['wordpress']['salt']['auth'],
     :secure_auth_salt => node['wordpress']['salt']['secure_auth'],
-    :logged_in_salt => node['wordpress']['salt']['logged_in'],
-    :nonce_salt => node['wordpress']['salt']['nonce'],
-    :lang            => node['wordpress']['languages']['lang']
+    :logged_in_salt   => node['wordpress']['salt']['logged_in'],
+    :nonce_salt       => node['wordpress']['salt']['nonce'],
+    :lang             => node['wordpress']['languages']['lang']
   )
   action :create
 end
@@ -98,7 +96,7 @@ if platform?('windows')
   include_recipe 'iis::remove_default_site'
 
   iis_pool 'WordpressPool' do
-    runtime_version "2.0"
+    runtime_version "2.0" # TODO: Change to Unmanaged after COOK-3634 is merged
     action :add
   end
 
