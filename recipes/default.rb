@@ -103,13 +103,16 @@ if platform?('windows')
   iis_site 'Wordpress' do
     protocol :http
     port 80
-    path dir
+    path node['wordpress']['dir']
     application_pool 'WordpressPool'
     action [:add,:start]
   end
 else
   web_app "wordpress" do
+    template "wordpress.conf.erb"
+    docroot node['wordpress']['dir']
+    server_name server_fqdn
+    server_aliases node['wordpress']['server_aliases']
     enable true
-    template "site.erb"
   end
 end
