@@ -16,9 +16,9 @@ end
 depends "apache2", ">= 0.99.4"
 depends "mysql", ">= 1.0.5"
 depends "build-essential"
-depends "curl"
+depends "iis"
 
-%w{ debian ubuntu }.each do |os|
+%w{ debian ubuntu windows }.each do |os|
   supports os
 end
 

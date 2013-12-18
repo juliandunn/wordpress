@@ -20,13 +20,12 @@
 include_recipe "php"
 include_recipe "php::composer"
 
-# On Windows PHP comes with the MySQL Module
+# On Windows PHP comes with the MySQL Module and we use IIS on Windows
 unless platform? "windows"
   include_recipe "php::module_mysql"
+  include_recipe "apache2"
+  include_recipe "apache2::mod_php5"
 end
-
-include_recipe "apache2"
-include_recipe "apache2::mod_php5"
 
 include_recipe "wordpress::wp_cli"
 include_recipe "wordpress::database"
@@ -40,21 +39,25 @@ dir = node['wordpress']['dir']
 
 directory dir do
   action :create
+  if platform?('windows')
+    rights :read, 'Everyone'
+  end
 end
 
-execute "Download WordPress" do
+execute 'Download WordPress' do
   action :run
   cwd dir
   command "#{bin} core download --version=#{node['wordpress']['version']}"
-  only_if { Dir["#{dir}/*"].empty? }
+  creates "#{dir}/index.php"
 end
 
 db_config = node['wordpress']['db'].map { |k,v| %<--db#{k}="#{v}"> }.join(" ")
+
 execute "Configure WordPress" do
   action :run
   cwd dir
   command "#{bin} core config #{db_config}"
-  not_if { File.exists? "#{dir}/wp-config.php" }
+  creates "#{dir}/wp-config.php"
 end
 
 template "#{node['wordpress']['dir']}/wp-config.php" do
@@ -81,9 +84,22 @@ execute "Install WordPress" do
   cwd dir
   command "#{bin} core install #{blog_config}"
   not_if { `#{bin} --path="#{dir}" core is-installed`; $?.exitstatus == 0 }
+  # creates "#{dir}/index.php"
 end
 
-web_app "wordpress" do
-  enable true
-  template "site.erb"
+if platform? "windows"
+
+  include_recipe 'iis::remove_default_site'
+
+  iis_site 'Wordpress' do
+    protocol :http
+    port 80
+    path dir
+    action [:add,:start]
+  end
+else
+  web_app "wordpress" do
+    enable true
+    template "site.erb"
+  end
 end

@@ -1,10 +1,13 @@
 #
 # Author:: Barry Steinglass (<barry@opscode.com>)
 # Author:: Koseki Kengo (<koseki@gmail.com>)
+# Author:: Lucas Hansen (<lucash@opscode.com>)
+# Author:: Julian C. Dunn (<jdunn@getchef.com>)
+#
 # Cookbook Name:: wordpress
 # Attributes:: wordpress
 #
-# Copyright 2009-2013, Opscode, Inc.
+# Copyright 2009-2013, Chef Software, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,14 +23,14 @@
 #
 
 # General settings
-default['wordpress']['version'] = "latest"
-default['wordpress']['cli_version'] = "0.11.2"
+default['wordpress']['version'] = 'latest'
+default['wordpress']['cli_version'] = '@stable'
 
 default['wordpress']['db']['name'] = "wordpressdb"
 default['wordpress']['db']['user'] = "wordpressuser"
 default['wordpress']['db']['pass'] = nil
 default['wordpress']['db']['prefix'] = 'wp_'
-default['wordpress']['db']['host'] = "localhost"
+default['wordpress']['db']['host'] = 'localhost'
 
 default['wordpress']['server_aliases'] = [node['fqdn']]
 
@@ -61,11 +64,8 @@ default['wordpress']['blog']['admin_email'] = "admin@localhost"
 default['wordpress']['blog']['url'] = "localhost"
 
 if platform_family?('windows')
-  drive = ENV['SystemDrive']
-  default['wordpress']['bin'] = 'wp.bat'
-  default['wordpress']['dir'] = "#{drive}/wordpress"
-  default['mysql']['pid_file'] = "#{drive}/Program Files" # Hack around a bug in the mysql cookbook
-  default['mysql']['confd_dir'] = "#{drive}/" # Hack around a bug in the mysql cookbook
+  default['wordpress']['bin'] = "#{node['php']['composer']['dir']}\\vendor\\bin\\wp.bat"
+  default['wordpress']['dir'] = "#{ENV['SystemDrive']}\\inetpub\\wordpress"
 else
   default['wordpress']['bin'] = 'wp'
   default['wordpress']['dir'] = '/var/www/wordpress'
