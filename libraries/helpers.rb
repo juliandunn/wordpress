@@ -2,6 +2,7 @@
 # Cookbook Name:: wordpress
 # Library:: helpers
 # Author:: Yvo van Doorn <yvo@getchef.com>
+# Author:: Julian C. Dunn <jdunn@getchef.com>
 #
 # Copyright 2013, Chef Software, Inc.
 #

@@ -18,7 +18,7 @@
 #
 
 include_recipe "php"
-include_recipe "php::composer"
+# include_recipe "php::composer" -- maybe put this back?
 
 # On Windows PHP comes with the MySQL Module and we use IIS on Windows
 unless platform? "windows"
@@ -27,11 +27,20 @@ unless platform? "windows"
   include_recipe "apache2::mod_php5"
 end
 
-include_recipe "wordpress::wp_cli"
+# include_recipe "wordpress::wp_cli" -- maybe put this back?
 include_recipe "wordpress::database"
 
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 node.set_unless['wordpress']['blog']['admin_password'] = secure_password
+node.set_unless['wordpress']['keys']['auth'] = secure_password
+node.set_unless['wordpress']['keys']['secure_auth'] = secure_password
+node.set_unless['wordpress']['keys']['logged_in'] = secure_password
+node.set_unless['wordpress']['keys']['nonce'] = secure_password
+node.set_unless['wordpress']['salt']['auth'] = secure_password
+node.set_unless['wordpress']['salt']['secure_auth'] = secure_password
+node.set_unless['wordpress']['salt']['logged_in'] = secure_password
+node.set_unless['wordpress']['salt']['nonce'] = secure_password
+
 node.save
 
 bin = node['wordpress']['bin']
@@ -39,62 +48,65 @@ dir = node['wordpress']['dir']
 
 directory dir do
   action :create
-  if platform?('windows')
+  if platform_family?('windows')
     rights :read, 'Everyone'
   end
 end
 
-execute 'Download WordPress' do
-  action :run
-  cwd dir
-  command "#{bin} core download --version=#{node['wordpress']['version']}"
-  creates "#{dir}/index.php"
+archive = platform_family?('windows') ? 'wordpress.zip' : 'wordpress.tar.gz'
+
+if platform_family?('windows')
+  windows_zipfile 'c:\inetpub' do # XXX do not hardcode
+    source node['wordpress']['url']
+    action :unzip
+    not_if {::File.exists?('c:\inetpub\wordpress\index.php')}
+  end
+else
+  remote_file "#{Chef::Config[:file_cache_path]}/#{archive}" do
+    source node['wordpress']['url']
+    action :create
+  end
+
+  execute "extract-wordpress" do
+    command "tar xf #{Chef::Config[:file_cache_path]}/#{archive} -C #{node['wordpress']['dir']}"
+    creates "#{node['wordpress']['dir']}/index.php"
+  end
 end
 
-db_config = node['wordpress']['db'].map { |k,v| %<--db#{k}="#{v}"> }.join(" ")
-
-execute "Configure WordPress" do
-  action :run
-  cwd dir
-  command "#{bin} core config #{db_config}"
-  creates "#{dir}/wp-config.php"
-end
-
-template "#{node['wordpress']['dir']}/wp-config.php" do
-  source "wp-config.php.erb"
-  owner "root"
-  group "root"
-  mode "0644"
+template "#{dir}/wp-config.php" do
+  source 'wp-config.php.erb'
   variables(
-    :database        => node['wordpress']['db']['database'],
-    :user            => node['wordpress']['db']['user'],
-    :password        => node['wordpress']['db']['password'],
-    :auth_key        => node['wordpress']['keys']['auth'],
+    :db_name => node['wordpress']['db']['name'],
+    :db_user => node['wordpress']['db']['user'],
+    :db_password => node['wordpress']['db']['pass'],
+    :db_host => node['wordpress']['db']['host'],
+    :auth_key => node['wordpress']['keys']['auth'],
     :secure_auth_key => node['wordpress']['keys']['secure_auth'],
-    :logged_in_key   => node['wordpress']['keys']['logged_in'],
-    :nonce_key       => node['wordpress']['keys']['nonce'],
+    :logged_in_key => node['wordpress']['keys']['logged_in'],
+    :nonce_key => node['wordpress']['keys']['nonce'],
+    :auth_salt => node['wordpress']['salt']['auth'],
+    :secure_auth_salt => node['wordpress']['salt']['secure_auth'],
+    :logged_in_salt => node['wordpress']['salt']['logged_in'],
+    :nonce_salt => node['wordpress']['salt']['nonce'],
     :lang            => node['wordpress']['languages']['lang']
   )
-  notifies :write, "log[wordpress_install_message]"
+  action :create
 end
 
-blog_config = node['wordpress']['blog'].map { |k, v| %<--#{k}="#{v}"> }.join(" ")
-execute "Install WordPress" do
-  action :run
-  cwd dir
-  command "#{bin} core install #{blog_config}"
-  not_if { `#{bin} --path="#{dir}" core is-installed`; $?.exitstatus == 0 }
-  # creates "#{dir}/index.php"
-end
-
-if platform? "windows"
+if platform?('windows')
 
   include_recipe 'iis::remove_default_site'
+
+  iis_pool 'WordpressPool' do
+    runtime_version "2.0"
+    action :add
+  end
 
   iis_site 'Wordpress' do
     protocol :http
     port 80
     path dir
+    application_pool 'WordpressPool'
     action [:add,:start]
   end
 else

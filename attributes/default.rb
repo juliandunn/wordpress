@@ -66,7 +66,9 @@ default['wordpress']['blog']['url'] = "localhost"
 if platform_family?('windows')
   default['wordpress']['bin'] = "#{node['php']['composer']['dir']}\\vendor\\bin\\wp.bat"
   default['wordpress']['dir'] = "#{ENV['SystemDrive']}\\inetpub\\wordpress"
+  default['wordpress']['url'] = "https://wordpress.org/wordpress-#{node['wordpress']['version']}.zip"
 else
   default['wordpress']['bin'] = 'wp'
   default['wordpress']['dir'] = '/var/www/wordpress'
+  default['wordpress']['url'] = "https://wordpress.org/wordpress-#{node['wordpress']['version']}.tar.gz"
 end
