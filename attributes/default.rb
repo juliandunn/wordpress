@@ -24,7 +24,6 @@
 
 # General settings
 default['wordpress']['version'] = 'latest'
-default['wordpress']['cli_version'] = '@stable'
 
 default['wordpress']['db']['name'] = "wordpressdb"
 default['wordpress']['db']['user'] = "wordpressuser"
